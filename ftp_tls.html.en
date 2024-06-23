@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head><!--
+        XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+              This file is generated from xml source: DO NOT EDIT
+        XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+      -->
+<title>Securing FTP With TLS - Apache HTTP Server</title>
+<link href="../style/css/manual.css" rel="stylesheet" media="all" type="text/css" title="Main stylesheet" />
+<link href="../style/css/manual-loose-100pc.css" rel="alternate stylesheet" media="all" type="text/css" title="No Sidebar - Default font size" />
+<link href="../style/css/manual-print.css" rel="stylesheet" media="print" type="text/css" />
+<link href="../images/favicon.ico" rel="shortcut icon" /></head>
+<body id="manual-page"><div id="page-header">
+<p class="menu"><a href="../mod/">Modules</a> | <a href="../mod/directives.html">Directives</a> | <a href="../faq/">FAQ</a> | <a href="../glossary.html">Glossary</a> | <a href="../sitemap.html">Sitemap</a></p>
+<p class="apache">Apache HTTP Server Version 2.2</p>
+<img alt="" src="../images/feather.gif" /></div>
+<div class="up"><a href="./"><img title="&lt;-" alt="&lt;-" src="../images/left.gif" /></a></div>
+<div id="path">
+<a href="http://www.apache.org/">Apache</a> &gt; <a href="http://httpd.apache.org/">HTTP Server</a> &gt; <a href="http://httpd.apache.org/docs/">Documentation</a> &gt; <a href="../">Version 2.2</a> &gt; <a href="./">FTP Protocol Support</a></div><div id="page-content"><div id="preamble"><h1>Securing FTP With TLS</h1>
+<div class="toplang">
+<p><span>Available Languages: </span><a href="../en/ftp/ftp_tls.html" title="English">&nbsp;en&nbsp;</a></p>
+</div>
+
+    <p>The support for FTP over TLS allows you to run FTP connections
+    securely through TLS encryption and certificate authentication
+    support. Apache mod_ftp supports RFC-compliant TLS support through
+    Apache's own mod_ssl.</p>
+  </div>
+<div id="quickview"><ul id="toc"><li><img alt="" src="../images/down.gif" /> <a href="#introduction">Introduction</a></li>
+<li><img alt="" src="../images/down.gif" /> <a href="#protocoldescription">Protocol Description</a></li>
+<li><img alt="" src="../images/down.gif" /> <a href="#ftpovertls">FTP over TLS Support</a></li>
+<li><img alt="" src="../images/down.gif" /> <a href="#implicitssl">Implicit SSL Support</a></li>
+<li><img alt="" src="../images/down.gif" /> <a href="#clientsupport">Client Support for FTP over TLS</a></li>
+</ul><h3>See also</h3><ul class="seealso"><li><a href="http://www.rfc-archive.org/getrfc.php?rfc=4217">RFC 4217
+    &#8212; Securing FTP with TLS</a></li><li><a href="http://www.rfc-archive.org/getrfc.php?rfc=2228">RFC 2228
+    &#8212; FTP Security Extensions</a></li><li><a href="http://www.rfc-archive.org/getrfc.php?rfc=2246">RFC 2246
+    &#8212; The TLS Protocol Version 1.0</a></li></ul></div>
+<div class="top"><a href="#page-header"><img alt="top" src="../images/up.gif" /></a></div>
+<div class="section">
+<h2><a name="introduction" id="introduction">Introduction</a></h2>
+
+    
+
+    <p>As the FTP protocol was developed long before security through
+    encryption became an important consideration, it was originally
+    designed as a clear-text protocol.  Both the command channel and
+    the data channel were, and in many cases remain, unencrypted.
+    Today, this is not desirable since the users' logins and passwords
+    travel in the clear across the network, and could be readily
+    detected by a malicious intruder.  Conversely, a user would not
+    easily be able to detect a spoofed server address because the
+    server could not identify itself by certificate.</p> 
+
+    <p>To address these limitations, the FTP over TLS protocol was
+    developed and became an Internet Standard described in <a href="http://www.rfc-archive.org/getrfc.php?rfc=4217">RFC
+    4217</a>.  The FTP over TLS protocol uses TLS connection upgrade,
+    where the client and server negotiate their features and
+    capabilities before upgrading to an encrypted connection.  </p>
+  </div><div class="top"><a href="#page-header"><img alt="top" src="../images/up.gif" /></a></div>
+<div class="section">
+<h2><a name="protocoldescription" id="protocoldescription">Protocol Description</a></h2>
+
+    
+
+    <p>The mod_ftp module for the Apache HTTP Server aims to implement
+    FTP over TLS as defined by <a href="http://www.rfc-archive.org/getrfc.php?rfc=4217">RFC
+    4217</a>.  The RFC describes how the FTP client and server can
+    discover each other's security capabilities and how a client can
+    upgrade an FTP control channel to use TLS protection.  This
+    connection upgrade behavior, similar to the SMTP over TLS standard
+    described in <a href="http://www.rfc-archive.org/getrfc.php?rfc=3207">RFC
+    3207</a>, allows an FTP over TLS server to run on the same port as
+    a plaintext FTP server, and offer both plaintext and protected
+    services simultaneously.</p>
+
+    
+    <p>The FTP protocol specification dictates that it is up to the
+    client to specify session attributes like the protection level.
+    The server cannot require that the client use TLS, but it can
+    refuse to accept any command from the client until it sends an
+    <code>AUTH TLS</code> FTP command to upgrade the control channel
+    to TLS protection.  See the <code class="directive"><a href="../mod/mod_ftp.html#ftpoptions">FTPOptions</a></code>, specifically the
+    <code>RequireSSL</code> option, to make the server refuse any FTP
+    command until a TLS session is established.</p>
+
+    
+
+    
+    <p>The use of TLS allows both the server and client to identify
+    themselves using standard SSL Certificates.  Generally, a
+    certificate will be in use on the server, but the server can be
+    configured to request client-side certificates for
+    authentication.  RFC 4217 requires that the client send a
+    <code>USER</code> command even if a certificate is presented, but
+    the server may forego requiring a password from the client. </p>
+
+    <p>Since the FTP over TLS RFC was published only in 2005, several
+    alternative approaches have arisen to secure file transfer
+    connections.  Besides the TLS connection upgrade on a normal FTP
+    connection as defined by the RFC, another popular approach is to
+    define a separate FTP control channel listener that can only be
+    accessed over SSL.  An SSL handshake has to be completed before
+    even the first FTP protocol exchange can take place.  This
+    approach, known as <em>Implicit SSL</em>, is supported by mod_ftp.
+    Finally, some FTP clients and server support file transfer over
+    SSH.  This approach is not supported by mod_ftp.</p>
+  </div><div class="top"><a href="#page-header"><img alt="top" src="../images/up.gif" /></a></div>
+<div class="section">
+<h2><a name="ftpovertls" id="ftpovertls">FTP over TLS Support</a></h2>
+
+    
+
+    <p>To implement TLS, mod_ftp uses Apache's
+    <code class="module"><a href="../mod/mod_ssl.html">mod_ssl</a></code>.  This means that the configuration
+    options for FTP over TLS are not too different from those for
+    HTTPS.  In fact, for RFC 4217-based FTP over TLS support, no
+    additional configuration options are necessary above the ones you
+    would use to set up an HTTP over SSL virtual host.  Note however
+    that we explicitly turn off <code class="directive"><a href="../mod/core.html#acceptfilter">AcceptFilter</a></code>.  This is necessary because
+    in FTP the server initiates the protocol conversation and not the
+    client.</p>
+
+    <div class="example"><p><code>
+      LoadModule ftp_module /usr/local/apache2/modules/mod_ftp.so<br />
+      <br />
+      Listen 21 ftp<br />
+      AcceptFilter ftp none<br />
+      <br />
+      LogFormat "%u [%a] %r %&gt;s" ftp_command<br />
+      LogFormat "%{%b %e %H:%M:%S %Y}t %T %a %B %U %M %F %d %W %u %S %Z %Y" ftp_transfer<br />
+      <br />
+      &lt;VirtualHost _default_:21&gt;<br />
+      <span class="indent">
+        <br />
+        FTP On<br />
+        SSLEngine on<br />
+        SSLCertificateFile conf/server.crt<br />
+        SSLCertificateKeyFile conf/server.key<br />
+        <br />
+        ErrorLog logs/ftps_error_log<br />
+        CustomLog logs/ftps_command_log ftp_command<br />
+        CustomLog logs/ftps_transfer_log ftp_transfer env=do_transfer_log<br />
+        <br />
+      </span>
+      &lt;/VirtualHost&gt;<br />
+    </code></p></div>
+
+    <div class="note">The above shows the simplest possible configuration of a
+    TLS-enabled FTP virtual host.  You should not use this in
+    production unless sufficient authentication and access control is
+    added. </div>
+
+  </div><div class="top"><a href="#page-header"><img alt="top" src="../images/up.gif" /></a></div>
+<div class="section">
+<h2><a name="implicitssl" id="implicitssl">Implicit SSL Support</a></h2>
+
+    
+
+    <p>The configuration below is similar to the one above, except for
+    the <code class="directive"><a href="../mod/ftp.html#ftpimplicitssl">FTPImplicitSSL</a></code> and the
+    listening port which is <code>990</code>. The <code class="directive"><a href="../mod/core.html#acceptfilter">AcceptFilter</a></code> is set to
+    <code>data</code>, since the conversation starts with an SSL
+    handshake from the client.</p>
+
+    <div class="example"><p><code>
+      LoadModule ftp_module /usr/local/apache2/modules/mod_ftp.so<br />
+      <br />
+      Listen 990 ftps<br />
+      AcceptFilter ftps data<br />
+      <br />
+      LogFormat "%u [%a] %r %&gt;s" ftp_command<br />
+      LogFormat "%{%b %e %H:%M:%S %Y}t %T %a %B %U %M %F %d %W %u %S %Z %Y" ftp_transfer<br />
+      <br />
+      &lt;VirtualHost _default_:990&gt;<br />
+      <span class="indent">
+        <br />
+        FTP On<br />
+        SSLEngine On<br />
+        FTPImplicitSSL On<br />
+        <br />
+        SSLCertificateFile    ssl/server.crt<br />
+        SSLCertificateKeyFile ssl/server.key<br />
+        <br />     
+        ErrorLog logs/ftps_error.log<br />
+        <br />
+        CustomLog logs/ftps_command.log ftp_command<br />
+        CustomLog logs/ftps_transfer.log ftp_transfer env=do_transfer_log<br />
+        <br />
+        DocumentRoot "/usr/local/apache2/htdocs"<br />
+        <br />
+      </span>
+      &lt;/VirtualHost&gt;<br />
+    </code></p></div>
+
+    <div class="note">The above shows the simplest possible configuration of a
+    TLS-enabled FTP virtual host.  You should not use this in
+    production unless sufficient authentication and access control is
+    added. </div>
+
+  </div><div class="top"><a href="#page-header"><img alt="top" src="../images/up.gif" /></a></div>
+<div class="section">
+<h2><a name="clientsupport" id="clientsupport">Client Support for FTP over TLS</a></h2>
+
+    
+
+    <p>An ever-growing number of FTP clients implements FTP over
+    TLS, and listing them all is outside the scope of this document.
+    A list can be found on <a href="http://en.wikipedia.org/List_of_FTP_clients">Wikipedia</a>.
+    When selecting a client, do keep in mind that the <em>FTP over
+    SSH</em> protocol (sometimes also called <em>SFTP</em>) is not
+    supported by <code class="module"><a href="../mod/mod_ftp.html">mod_ftp</a></code>.</p>
+
+  </div></div>
+<div class="bottomlang">
+<p><span>Available Languages: </span><a href="../en/ftp/ftp_tls.html" title="English">&nbsp;en&nbsp;</a></p>
+</div><div id="footer">
+<p class="apache">Copyright 2009 The Apache Software Foundation.<br />Licensed under the <a href="http://www.apache.org/licenses/LICENSE-2.0">Apache License, Version 2.0</a>.</p>
+<p class="menu"><a href="../mod/">Modules</a> | <a href="../mod/directives.html">Directives</a> | <a href="../faq/">FAQ</a> | <a href="../glossary.html">Glossary</a> | <a href="../sitemap.html">Sitemap</a></p></div>
+</body></html>
